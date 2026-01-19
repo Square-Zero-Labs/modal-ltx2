@@ -84,8 +84,8 @@ class LTX2:
         negative_prompt="",
         num_inference_steps=40,
         num_frames=121,
-        width=848,
-        height=480,
+        width=768,
+        height=512,
         frame_rate = 24.0,
         guidance_scale=4.0,
         seed=42,
@@ -111,8 +111,6 @@ class LTX2:
         print("🧠 LTX2: starting latent upsampler")
         video = self.upsample_pipe(
             video=video,
-            width=width,
-            height=height,
             num_frames=num_frames,
             generator=generator,
             output_type="np",
@@ -140,11 +138,11 @@ class LTX2:
 def main(
     prompt="An animated polar bear walks into an igloo and says 'I'm home! Who is ready to party?'",
     negative_prompt="worst quality, inconsistent motion, blurry, jittery, distorted",
-    num_inference_steps: int = 40,  
+    num_inference_steps: int = 50,  
     guidance_scale: float = 4.0,
     num_frames: int = 121, 
-    width: int = 848,
-    height: int = 480,
+    width: int = 768,
+    height: int = 512,
     seed: int = 42,
     ):
 
