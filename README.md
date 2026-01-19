@@ -28,7 +28,7 @@ export LTX2_API_TOKEN=your-token-here
 Use the local entrypoint to kick off a run on Modal and save the result:
 
 ```bash
-modal run ltx2_modal.py --prompt "a cinematic mountain sunrise"
+modal run ltx2_modal.py --prompt "An animated polar bear wearing a party hat walks into an igloo and says, 'I'm home! What's for dinner? Salmon I hope!'"
 ```
 
 ## Call the API directly
@@ -38,7 +38,7 @@ curl -X POST "$LTX2_API_URL" \
   -H "Authorization: Bearer $LTX2_API_TOKEN" \
   -H "Content-Type: application/json" \
   -o ltx2-output.mp4 \
-  -d '{"prompt":"a cinematic mountain sunrise","height":576,"width":1024,"num_frames":48,"fps":24,"guidance_scale":3.0,"num_inference_steps":30,"seed":0}'
+  -d '{"prompt":"a cinematic mountain sunrise"}'
 ```
 
 ## API schema

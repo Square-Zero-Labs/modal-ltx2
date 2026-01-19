@@ -9,9 +9,11 @@ APP_NAME = "ltx2-text-to-video"
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
+    # TODO: once LTX2 in diffusers release, change from main to that version (https://github.com/huggingface/diffusers/releases)
     .uv_pip_install(
         "accelerate==1.6.0",
-        "diffusers==0.33.1",
+        "av==12.0.0",
+        "https://github.com/huggingface/diffusers/archive/refs/heads/main.zip",
         "huggingface-hub==0.36.0",
         "imageio==2.37.0",
         "imageio-ffmpeg==0.5.1",
@@ -77,7 +79,6 @@ class LTX2:
         height=512,
         frame_rate = 24.0,
         guidance_scale=4.0,
-        seed=42,
     ):
 
         video, audio = self.pipe(
@@ -90,7 +91,6 @@ class LTX2:
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             output_type="np",
-            seed=seed,
             return_dict=False,
         )
         video = (video * 255).round().astype("uint8")
@@ -113,15 +113,14 @@ class LTX2:
 
 @app.local_entrypoint()
 def main(
-    prompt="An animated polar bear walks into an igloo and says 'I\'m home! What's for dinner?'",
+    prompt="An animated polar bear walks into an igloo and says 'I'm home! Who is ready to party?'",
     negative_prompt="worst quality, inconsistent motion, blurry, jittery, distorted",
     num_inference_steps: int = 40,  
     guidance_scale: float = 4.5,
     num_frames: int = 121, 
     width: int = 768,
     height: int = 512,
-    seed: int = 42,
-):
+    ):
 
 
     ltx2 = LTX2()
@@ -137,7 +136,6 @@ def main(
             num_frames=num_frames,
             width=width,
             height=height,
-            seed=seed,
         )
         duration = time.time() - start
         print(f"🎥 Client received video in {int(duration)}s")
