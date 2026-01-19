@@ -84,8 +84,8 @@ class LTX2:
         negative_prompt="",
         num_inference_steps=40,
         num_frames=121,
-        width=1920,
-        height=1080,
+        width=848,
+        height=480,
         frame_rate = 24.0,
         guidance_scale=4.0,
         seed=42,
@@ -143,8 +143,8 @@ def main(
     num_inference_steps: int = 40,  
     guidance_scale: float = 4.0,
     num_frames: int = 121, 
-    width: int = 768,
-    height: int = 512,
+    width: int = 848,
+    height: int = 480,
     seed: int = 42,
     ):
 
