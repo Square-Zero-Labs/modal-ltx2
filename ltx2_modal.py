@@ -1,3 +1,4 @@
+import gc
 import string
 import time
 from pathlib import Path
@@ -13,7 +14,7 @@ image = (
     .uv_pip_install(
         "accelerate==1.6.0",
         "av==12.0.0",
-        "https://github.com/huggingface/diffusers/archive/refs/heads/main.zip",
+        "https://github.com/huggingface/diffusers/archive/refs/pull/12934/head.zip",
         "huggingface-hub==0.36.0",
         "imageio==2.37.0",
         "imageio-ffmpeg==0.5.1",
@@ -68,20 +69,16 @@ class LTX2:
         self.pipe = LTX2Pipeline.from_pretrained(
             MODEL_ID, torch_dtype=torch.bfloat16
         )
+
         self.pipe.to("cuda")
-        self.pipe.load_lora_weights(
-            "Lightricks/LTX-2-19b-IC-LoRA-Detailer",
-            weight_name="ltx-2-19b-ic-lora-detailer.safetensors",
-            adapter_name="detailer",
-        )
         latent_upsampler = LTX2LatentUpsamplerModel.from_pretrained(
             MODEL_ID, subfolder="latent_upsampler", torch_dtype=torch.bfloat16
         )
         self.upsample_pipe = LTX2LatentUpsamplePipeline(
             vae=self.pipe.vae, latent_upsampler=latent_upsampler
         )
-        # self.upsample_pipe.vae.enable_tiling()
         self.upsample_pipe.to(device="cuda", dtype=torch.bfloat16)
+
         scale = getattr(self.upsample_pipe.latent_upsampler.config, "rational_spatial_scale", None)
         print(f"🧠 LTX2: latent upsampler rational_spatial_scale={scale}")
 
@@ -98,14 +95,22 @@ class LTX2:
         guidance_scale=4.0,
         seed=42,
         detailer_lora_scale=1.0,
+        stage2_distilled_lora_scale=1.0,
     ):
 
         import torch
 
         generator = torch.Generator(device="cuda").manual_seed(seed)
+        self.pipe.load_lora_weights(
+            "Lightricks/LTX-2-19b-IC-LoRA-Detailer",
+            weight_name="ltx-2-19b-ic-lora-detailer.safetensors",
+            adapter_name="detailer",
+        )
         self.pipe.set_adapters("detailer", adapter_weights=detailer_lora_scale)
-        print("🧠 LTX2: starting base generation")
-        video, audio = self.pipe(
+        print(f"🧠 LTX2: adapters available (stage1)={self.pipe.get_list_adapters()}")
+        print(f"🧠 LTX2: adapters active (stage1)={self.pipe.get_active_adapters()}")
+        print("🧠 LTX2: starting base latent generation")
+        video_latent, audio_latent = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
             width=width,
@@ -115,24 +120,61 @@ class LTX2:
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             generator=generator,
-            output_type="np",
+            output_type="latent",
             return_dict=False,
         )
-        print(f"🧠 LTX2: base output shape={getattr(video, 'shape', None)} dtype={getattr(video, 'dtype', None)}")
+        print(
+            "🧠 LTX2: base latent output shape="
+            f"{getattr(video_latent, 'shape', None)} dtype={getattr(video_latent, 'dtype', None)}"
+        )
         print("🧠 LTX2: starting latent upsampler")
         upsample_start = time.time()
-        video = self.upsample_pipe(
-            video=video,
-            num_frames=num_frames,
+        video_latent = self.upsample_pipe(
+            latents=video_latent,
+            output_type="latent",
             generator=generator,
-            output_type="np",
             return_dict=False,
         )[0]
         upsample_elapsed = time.time() - upsample_start
         print(
             f"🧠 LTX2: upsampler complete in {upsample_elapsed:.2f}s "
-            f"shape={getattr(video, 'shape', None)} dtype={getattr(video, 'dtype', None)}"
+            f"shape={getattr(video_latent, 'shape', None)} dtype={getattr(video_latent, 'dtype', None)}"
         )
+        print("🧠 LTX2: starting stage 2 generation")
+        from diffusers.pipelines.ltx2.utils import STAGE_2_DISTILLED_SIGMA_VALUES
+
+        self.pipe.vae.enable_tiling()
+        self.pipe.unload_lora_weights()
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+        gc.collect()
+        self.pipe.enable_sequential_cpu_offload()
+        self.pipe.load_lora_weights(
+            "Lightricks/LTX-2",
+            weight_name="ltx-2-19b-distilled-lora-384.safetensors",
+            adapter_name="distilled_stage2",
+        )
+        self.pipe.set_adapters("distilled_stage2", adapter_weights=stage2_distilled_lora_scale)
+        print(f"🧠 LTX2: adapters available (stage2)={self.pipe.get_list_adapters()}")
+        print(f"🧠 LTX2: adapters active (stage2)={self.pipe.get_active_adapters()}")
+        stage2_width = width * 2
+        stage2_height = height * 2
+        video, audio = self.pipe(
+            latents=video_latent,
+            audio_latents=audio_latent,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            width=stage2_width,
+            height=stage2_height,
+            num_frames=num_frames,
+            frame_rate=frame_rate,
+            sigmas=STAGE_2_DISTILLED_SIGMA_VALUES,
+            guidance_scale=1.0,
+            generator=generator,
+            output_type="np",
+            return_dict=False,
+        )
+        print("🧠 LTX2: stage 2 generation complete")
         video = (video * 255).round().astype("uint8")
         from diffusers.pipelines.ltx2.export_utils import encode_video
 
@@ -161,6 +203,7 @@ def main(
     height: int = 512,
     seed: int = 42,
     detailer_lora_scale: float = 1.0,
+    stage2_distilled_lora_scale: float = 1.0,
     ):
 
 
@@ -179,6 +222,7 @@ def main(
             height=height,
             seed=seed,
             detailer_lora_scale=detailer_lora_scale,
+            stage2_distilled_lora_scale=stage2_distilled_lora_scale,
         )
         duration = time.time() - start
         print(f"🎥 Client received video in {int(duration)}s")
