@@ -7,6 +7,7 @@ import modal
 
 MODEL_ID = "Lightricks/LTX-2"
 APP_NAME = "ltx2-text-to-video"
+STAGE_2_DISTILLED_SIGMAS = [0.909375, 0.725, 0.421875]
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -141,8 +142,9 @@ class LTX2:
             f"shape={getattr(video_latent, 'shape', None)} dtype={getattr(video_latent, 'dtype', None)}"
         )
         print("🧠 LTX2: starting stage 2 generation")
-        from diffusers.pipelines.ltx2.utils import STAGE_2_DISTILLED_SIGMA_VALUES
-
+        audio_latent = audio_latent.to(self.pipe.audio_vae.dtype)
+        generated_mel_spectrograms = self.pipe.audio_vae.decode(audio_latent, return_dict=False)[0]
+        stage1_audio = self.pipe.vocoder(generated_mel_spectrograms)
         self.pipe.vae.enable_tiling()
         self.pipe.unload_lora_weights()
         torch.cuda.empty_cache()
@@ -159,7 +161,15 @@ class LTX2:
         print(f"🧠 LTX2: adapters active (stage2)={self.pipe.get_active_adapters()}")
         stage2_width = width * 2
         stage2_height = height * 2
-        video, audio = self.pipe(
+        sigma0 = STAGE_2_DISTILLED_SIGMAS[0]
+        noise = torch.randn(
+            video_latent.shape,
+            generator=generator,
+            device=video_latent.device,
+            dtype=video_latent.dtype,
+        )
+        video_latent = video_latent + noise * sigma0
+        video, _audio_unused = self.pipe(
             latents=video_latent,
             audio_latents=audio_latent,
             prompt=prompt,
@@ -168,12 +178,13 @@ class LTX2:
             height=stage2_height,
             num_frames=num_frames,
             frame_rate=frame_rate,
-            sigmas=STAGE_2_DISTILLED_SIGMA_VALUES,
+            sigmas=STAGE_2_DISTILLED_SIGMAS,
             guidance_scale=1.0,
             generator=generator,
             output_type="np",
             return_dict=False,
         )
+        audio = stage1_audio
         print("🧠 LTX2: stage 2 generation complete")
         video = (video * 255).round().astype("uint8")
         from diffusers.pipelines.ltx2.export_utils import encode_video
