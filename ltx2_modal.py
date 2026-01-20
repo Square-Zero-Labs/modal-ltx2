@@ -7,7 +7,7 @@ import modal
 
 MODEL_ID = "Lightricks/LTX-2"
 APP_NAME = "ltx2-text-to-video"
-STAGE_2_DISTILLED_SIGMAS = [0.909375, 0.725, 0.421875]
+STAGE_2_DISTILLED_SIGMAS = [0.909375, 0.725, 0.421875, 0.0]
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
