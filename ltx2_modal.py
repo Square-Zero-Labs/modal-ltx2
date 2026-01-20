@@ -76,6 +76,8 @@ class LTX2:
         )
         self.upsample_pipe.vae.enable_tiling()
         self.upsample_pipe.to(device="cuda", dtype=torch.bfloat16)
+        scale = getattr(self.upsample_pipe.latent_upsampler.config, "rational_spatial_scale", None)
+        print(f"🧠 LTX2: latent upsampler rational_spatial_scale={scale}")
 
     @modal.method()
     def generate(
@@ -108,7 +110,9 @@ class LTX2:
             output_type="np",
             return_dict=False,
         )
+        print(f"🧠 LTX2: base output shape={getattr(video, 'shape', None)} dtype={getattr(video, 'dtype', None)}")
         print("🧠 LTX2: starting latent upsampler")
+        upsample_start = time.time()
         video = self.upsample_pipe(
             video=video,
             num_frames=num_frames,
@@ -116,7 +120,11 @@ class LTX2:
             output_type="np",
             return_dict=False,
         )[0]
-        print("🧠 LTX2: upsampler complete")
+        upsample_elapsed = time.time() - upsample_start
+        print(
+            f"🧠 LTX2: upsampler complete in {upsample_elapsed:.2f}s "
+            f"shape={getattr(video, 'shape', None)} dtype={getattr(video, 'dtype', None)}"
+        )
         video = (video * 255).round().astype("uint8")
         from diffusers.pipelines.ltx2.export_utils import encode_video
 
@@ -138,7 +146,7 @@ class LTX2:
 def main(
     prompt="An animated polar bear walks into an igloo and says 'I'm home! Who is ready to party?'",
     negative_prompt="worst quality, inconsistent motion, blurry, jittery, distorted",
-    num_inference_steps: int = 50,  
+    num_inference_steps: int = 40,  
     guidance_scale: float = 4.0,
     num_frames: int = 121, 
     width: int = 768,

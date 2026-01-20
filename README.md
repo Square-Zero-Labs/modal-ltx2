@@ -28,7 +28,7 @@ export LTX2_API_TOKEN=your-token-here
 Use the local entrypoint to kick off a run on Modal and save the result:
 
 ```bash
-modal run ltx2_modal.py --prompt "An animated polar bear wearing a party hat walks into an igloo and says, 'I'm home! What's for dinner? Salmon I hope!'"
+modal run ltx2_modal.py --prompt "Style: Pixar-style 3D animation, EXT. snowy Arctic dusk at the mouth of a rounded ice igloo, a wide establishing shot with soft blue rim light and warm amber spill from inside as a friendly polar bear with big expressive eyes, a teal knit scarf, and fluffy fur pads across crunchy snow toward the entrance. The bear’s shoulders sway with a cheerful gait, breath puffing in the cold, while gentle wind and soft footsteps on snow mix with a cozy crackle from inside. The camera slowly dollies closer as the bear ducks under the ice arch and steps into the glowing interior, textured with smooth ice walls and a woven rug. In a medium shot, the bear straightens, smiles wide, and gestures with a paw, mouth moving clearly to the words, 'i’m home! what’s for dinner? i hope it’s salmon!' in a warm, upbeat voice. The bear’s ears perk and eyes sparkle as it looks around expectantly, and the camera eases to a gentle stop on a welcoming, intimate framing, pixar style acting and timing."
 ```
 
 ## Call the API directly
