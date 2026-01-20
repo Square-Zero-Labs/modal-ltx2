@@ -17,6 +17,7 @@ image = (
         "huggingface-hub==0.36.0",
         "imageio==2.37.0",
         "imageio-ffmpeg==0.5.1",
+        "peft==0.17.0",
         "sentencepiece==0.2.0",
         "torch==2.7.0",
         "transformers==4.51.3",
@@ -68,13 +69,18 @@ class LTX2:
             MODEL_ID, torch_dtype=torch.bfloat16
         )
         self.pipe.to("cuda")
+        self.pipe.load_lora_weights(
+            "Lightricks/LTX-2-19b-IC-LoRA-Detailer",
+            weight_name="ltx-2-19b-ic-lora-detailer.safetensors",
+            adapter_name="detailer",
+        )
         latent_upsampler = LTX2LatentUpsamplerModel.from_pretrained(
             MODEL_ID, subfolder="latent_upsampler", torch_dtype=torch.bfloat16
         )
         self.upsample_pipe = LTX2LatentUpsamplePipeline(
             vae=self.pipe.vae, latent_upsampler=latent_upsampler
         )
-        self.upsample_pipe.vae.enable_tiling()
+        # self.upsample_pipe.vae.enable_tiling()
         self.upsample_pipe.to(device="cuda", dtype=torch.bfloat16)
         scale = getattr(self.upsample_pipe.latent_upsampler.config, "rational_spatial_scale", None)
         print(f"🧠 LTX2: latent upsampler rational_spatial_scale={scale}")
@@ -91,11 +97,13 @@ class LTX2:
         frame_rate = 24.0,
         guidance_scale=4.0,
         seed=42,
+        detailer_lora_scale=1.0,
     ):
 
         import torch
 
         generator = torch.Generator(device="cuda").manual_seed(seed)
+        self.pipe.set_adapters("detailer", adapter_weights=detailer_lora_scale)
         print("🧠 LTX2: starting base generation")
         video, audio = self.pipe(
             prompt=prompt,
@@ -152,6 +160,7 @@ def main(
     width: int = 768,
     height: int = 512,
     seed: int = 42,
+    detailer_lora_scale: float = 1.0,
     ):
 
 
@@ -169,6 +178,7 @@ def main(
             width=width,
             height=height,
             seed=seed,
+            detailer_lora_scale=detailer_lora_scale,
         )
         duration = time.time() - start
         print(f"🎥 Client received video in {int(duration)}s")
