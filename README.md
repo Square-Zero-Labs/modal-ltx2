@@ -10,6 +10,24 @@ Create a Modal secret that holds the API token:
 modal secret create ltx2-api-token LTX2_API_TOKEN=your-token-here
 ```
 
+Create a Modal secret for Hugging Face (Gemma is gated):
+
+```bash
+modal secret create HF_TOKEN HF_TOKEN="$(python - <<'PY'
+from pathlib import Path
+
+for line in Path(".env").read_text().splitlines():
+    line = line.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        continue
+    key, value = line.split("=", 1)
+    if key.strip() == "HF_TOKEN":
+        print(value.strip().strip('"').strip("'"))
+        break
+PY
+)"
+```
+
 Deploy the app:
 
 ```bash
