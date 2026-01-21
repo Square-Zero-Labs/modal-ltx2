@@ -53,7 +53,7 @@ modal run ltx2_modal.py --prompt "Style: Pixar-style 3D animation, EXT. snowy Ar
 modal run ltx2_modal.py --seconds 10 --prompt "INT. OVEN – DAY. Static camera from inside the oven, looking outward through the slightly fogged glass door. Warm golden light glows around freshly baked cookies. The baker’s face fills the frame, eyes wide with focus, his breath fogging the glass as he leans in. Subtle reflections move across the glass as steam rises. Baker (whispering dramatically): 'Today… I achieve perfection.' He leans even closer, nose nearly touching the glass. 'Golden edges. Soft center. The gods themselves will smell these cookies and weep.' pixar style acting and timing"
 ```
 
-Enable the detailer LoRA (default is off):
+Enable the detailer LoRA (applies to both stages; default is off):
 
 ```bash
 modal run ltx2_modal.py --seconds 10 --use-detailer-lora --prompt "Style: cinematic-realistic, INT. upscale sleek corner office with warm daylight, polished wood, and soft reflections on metal fixtures. A beautiful blonde coworker in a tailored blazer and smart trousers strides into the office with brisk heel clicks while a beautiful redhead coworker in a fitted blouse looks up from her monitor at a minimalist desk. The blonde slows near the desk, excited smile spreading as she says, 'I figured out how to create LTX-2 videos fast and for free!' The redhead straightens in her chair, eyes bright, and responds with a delighted laugh, 'No way!' The camera pushes in to a two-shot as each raises a hand and complete a crisp high five."

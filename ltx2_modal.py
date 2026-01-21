@@ -168,14 +168,18 @@ class LTX2:
         from ltx_core.loader.sd_ops import LTXV_LORA_COMFY_RENAMING_MAP
 
         loras = []
+        distilled_loras = [LoraPathStrengthAndSDOps(self.distilled_lora_path, 0.8, LTXV_LORA_COMFY_RENAMING_MAP)]
         if use_detailer_lora:
-            loras.append(LoraPathStrengthAndSDOps(self.detailer_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP))
-        distilled_loras = [
-            LoraPathStrengthAndSDOps(self.distilled_lora_path, 0.8, LTXV_LORA_COMFY_RENAMING_MAP),
-            LoraPathStrengthAndSDOps(self.detailer_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP),
-        ]
+            detailer = LoraPathStrengthAndSDOps(
+                self.detailer_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP
+            )
+            loras.append(detailer)
+            distilled_loras.append(detailer)
 
-        pipeline_key = ("detailer-1.0" if use_detailer_lora else "detailer-off", "distilled-0.8+detailer-1.0")
+        pipeline_key = (
+            "detailer-on" if use_detailer_lora else "detailer-off",
+            "distilled-0.8",
+        )
         if self.pipeline is None or self._pipeline_scales != pipeline_key:
             self.pipeline = TI2VidTwoStagesPipeline(
                 checkpoint_path=self.checkpoint_path,
