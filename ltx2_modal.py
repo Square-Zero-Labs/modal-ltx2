@@ -150,8 +150,7 @@ class LTX2:
     def generate(
         self,
         prompt,
-        negative_prompt="",
-        num_inference_steps=40,
+        num_inference_steps=50,
         num_frames=121,
         width=768,
         height=512,
@@ -162,7 +161,7 @@ class LTX2:
         from ltx_core.loader import LoraPathStrengthAndSDOps
         from ltx_core.model.video_vae import TilingConfig, get_video_chunks_number
         from ltx_pipelines.ti2vid_two_stages import TI2VidTwoStagesPipeline
-        from ltx_pipelines.utils.constants import AUDIO_SAMPLE_RATE
+        from ltx_pipelines.utils.constants import AUDIO_SAMPLE_RATE, DEFAULT_NEGATIVE_PROMPT
         from ltx_pipelines.utils.media_io import encode_video
 
         from ltx_core.loader.sd_ops import LTXV_LORA_COMFY_RENAMING_MAP
@@ -188,7 +187,7 @@ class LTX2:
         print("🧠 LTX2: starting two-stage pipeline")
         video, audio = self.pipeline(
             prompt=prompt,
-            negative_prompt=negative_prompt,
+            negative_prompt=DEFAULT_NEGATIVE_PROMPT,
             seed=seed,
             height=height,
             width=width,
@@ -220,15 +219,13 @@ class LTX2:
 @app.local_entrypoint()
 def main(
     prompt="An animated polar bear walks into an igloo and says 'I'm home! Who is ready to party?'",
-    negative_prompt="worst quality, inconsistent motion, blurry, jittery, distorted",
-    num_inference_steps: int = 40,  
+    num_inference_steps: int = 50,  
     guidance_scale: float = 4.0,
     num_frames: int = 121, 
     width: int = 768,
     height: int = 512,
     seed: int = 42,
     ):
-
 
     ltx2 = LTX2()
 
@@ -237,7 +234,6 @@ def main(
         start = time.time()
         mp4_name = ltx2.generate.remote(
             prompt=prompt,
-            negative_prompt=negative_prompt,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             num_frames=num_frames,
