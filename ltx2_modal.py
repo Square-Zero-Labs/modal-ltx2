@@ -206,6 +206,7 @@ class LTX2:
                 images.append((tmp_file.name, 0, image_strength))
 
         print("🧠 LTX2: starting two-stage pipeline")
+        pipeline_start = time.time()
         video, audio = self.pipeline(
             prompt=prompt,
             negative_prompt=DEFAULT_NEGATIVE_PROMPT,
@@ -219,7 +220,8 @@ class LTX2:
             images=images,
             tiling_config=tiling_config,
         )
-        print("🧠 LTX2: pipeline complete")
+        pipeline_elapsed = time.time() - pipeline_start
+        print(f"🧠 LTX2: pipeline complete in {pipeline_elapsed:.2f}s")
 
         import torch
 
@@ -257,7 +259,7 @@ def main(
         print(f"🎥 Generating a video from the prompt '{prompt}'")
         start = time.time()
         raw_frames = seconds * 24
-        num_frames = max(1, ((raw_frames - 1) // 8) * 8 + 1)
+        num_frames = max(1, raw_frames +1)
         print(f"🎥 Using {num_frames} frames for {seconds}s at 24 fps")
         image_bytes = None
         image_filename = "image.png"

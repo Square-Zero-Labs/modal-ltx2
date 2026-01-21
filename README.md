@@ -45,26 +45,30 @@ export LTX2_API_TOKEN=your-token-here
 
 Use the local entrypoint to kick off a run on Modal and save the result:
 
-Output resolution is exactly the `--width`/`--height` you pass. Defaults are `1536x1024` (two-stage LTX-2 defaults). Width and height must be divisible by 64.
+Output resolution is exactly the `--width`/`--height` you pass. Defaults are `1536x1024` (two-stage LTX-2 defaults). Width and height must be divisible by 64. For 16:9, we saw best results using `1280x704`.
 
 ```bash
-modal run ltx2_modal.py --prompt "Style: Pixar-style 3D animation, EXT. snowy Arctic dusk at the mouth of a rounded ice igloo, a wide establishing shot with soft blue rim light and warm amber spill from inside as a friendly polar bear with big expressive eyes, a teal knit scarf, and fluffy fur pads across crunchy snow toward the entrance. The bear’s shoulders sway with a cheerful gait, breath puffing in the cold, while gentle wind and soft footsteps on snow mix with a cozy crackle from inside. The camera slowly dollies closer as the bear ducks under the ice arch and steps into the glowing interior, textured with smooth ice walls and a woven rug. In a medium shot, the bear straightens, smiles wide, and gestures with a paw, mouth moving clearly to the words, 'i’m home! what’s for dinner? i hope it’s salmon!' in a warm, upbeat voice. The bear’s ears perk and eyes sparkle as it looks around expectantly, and the camera eases to a gentle stop on a welcoming, intimate framing, pixar style acting and timing."
+modal run ltx2_modal.py --width 1280 --height 704 --prompt "Style: Pixar-style 3D animation, EXT. snowy Arctic dusk at the mouth of a rounded ice igloo, a wide establishing shot with soft blue rim light and warm amber spill from inside as a friendly polar bear with big expressive eyes, a teal knit scarf, and fluffy fur pads across crunchy snow toward the entrance. The bear’s shoulders sway with a cheerful gait, breath puffing in the cold, while gentle wind and soft footsteps on snow mix with a cozy crackle from inside. The camera slowly dollies closer as the bear ducks under the ice arch and steps into the glowing interior, textured with smooth ice walls and a woven rug. In a medium shot, the bear straightens, smiles wide, and gestures with a paw, mouth moving clearly to the words, 'i’m home! what’s for dinner? i hope it’s salmon!' in a warm, upbeat voice. The bear’s ears perk and eyes sparkle as it looks around expectantly, and the camera eases to a gentle stop on a welcoming, intimate framing, pixar style acting and timing."
 ```
 
 ```bash
-modal run ltx2_modal.py --seconds 10 --prompt "INT. OVEN – DAY. Static camera from inside the oven, looking outward through the slightly fogged glass door. Warm golden light glows around freshly baked cookies. The baker’s face fills the frame, eyes wide with focus, his breath fogging the glass as he leans in. Subtle reflections move across the glass as steam rises. Baker (whispering dramatically): 'Today… I achieve perfection.' He leans even closer, nose nearly touching the glass. 'Golden edges. Soft center. The gods themselves will smell these cookies and weep.' pixar style acting and timing"
+modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --prompt "INT. OVEN – DAY. Static camera from inside the oven, looking outward through the slightly fogged glass door. Warm golden light glows around freshly baked cookies. The baker’s face fills the frame, eyes wide with focus, his breath fogging the glass as he leans in. Subtle reflections move across the glass as steam rises. Baker (whispering dramatically): 'Today… I achieve perfection.' He leans even closer, nose nearly touching the glass. 'Golden edges. Soft center. The gods themselves will smell these cookies and weep.' pixar style acting and timing"
+```
+
+```bash
+modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --prompt "EXT. GRAND CITY PLAZA, DAY - cinematic-realistic wide shot with crisp sunlight, long architectural shadows, and shimmering glass reflections as a massive fireball erupts behind an athletic blonde woman in faded jeans and a black tank top and blonde hair. She is launched forward through smoke and sparks and lands and bursts into a run across polished stone, the camera tracking alongside in a smooth, stabilized move that keeps her centered against the skyline. The shot pushes in to a medium close-up, revealing soot streaks on her cheekbones, a focused jawline, and bright blue eyes as she turns to face the lens. 'I can teach you how to make LTX-2 videos fast and for free!' she shouts triumphantly in clear American English, breath heaving, while the fireball roars and ash drifts in the sunlit air. Glassy facades catch the orange flare, fountains mist in the background, and the soundscape blends crackling flame and her voice ringing through the open square."
 ```
 
 Enable the detailer LoRA (applies to both stages; default is off):
 
 ```bash
-modal run ltx2_modal.py --seconds 10 --use-detailer-lora --prompt "Style: cinematic-realistic, INT. upscale sleek corner office with warm daylight, polished wood, and soft reflections on metal fixtures. A beautiful blonde coworker in a tailored blazer and smart trousers strides into the office with brisk heel clicks while a beautiful redhead coworker in a fitted blouse looks up from her monitor at a minimalist desk. The blonde slows near the desk, excited smile spreading as she says, 'I figured out how to create LTX-2 videos fast and for free!' The redhead straightens in her chair, eyes bright, and responds with a delighted laugh, 'No way!' The camera pushes in to a two-shot as each raises a hand and complete a crisp high five."
+modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --use-detailer-lora --prompt "Style: cinematic-realistic, INT. upscale sleek corner office with warm daylight, polished wood, and soft reflections on metal fixtures. A beautiful blonde coworker in a tailored blazer and smart trousers strides into the office with brisk heel clicks while a beautiful redhead coworker in a fitted blouse looks up from her monitor at a minimalist desk. The blonde slows near the desk, excited smile spreading as she says, 'I figured out how to create LTX-2 videos fast and for free!' The redhead straightens in her chair, eyes bright, and responds with a delighted laugh, 'No way!' The camera pushes in to a two-shot as each raises a hand and complete a crisp high five."
 ```
 
 Image-to-video example:
 
 ```bash
-modal run ltx2_modal.py --seconds 10 --image-path "./inputs/panda-at-work.jpg" --image-strength 0.9 --prompt 'A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!'
+modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --image-path "./inputs/panda-at-work.jpg" --image-strength 0.9 --prompt 'A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!'
 ```
 
 ## Call the API directly
