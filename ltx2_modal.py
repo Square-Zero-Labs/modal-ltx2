@@ -157,6 +157,7 @@ class LTX2:
         frame_rate = 24.0,
         guidance_scale=4.0,
         seed=42,
+        use_detailer_lora=False,
     ):
         from ltx_core.loader import LoraPathStrengthAndSDOps
         from ltx_core.model.video_vae import TilingConfig, get_video_chunks_number
@@ -166,10 +167,12 @@ class LTX2:
 
         from ltx_core.loader.sd_ops import LTXV_LORA_COMFY_RENAMING_MAP
 
-        loras = [LoraPathStrengthAndSDOps(self.detailer_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP)]
+        loras = []
+        if use_detailer_lora:
+            loras.append(LoraPathStrengthAndSDOps(self.detailer_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP))
         distilled_loras = [LoraPathStrengthAndSDOps(self.distilled_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP)]
 
-        pipeline_key = ("detailer-1.0", "distilled-1.0")
+        pipeline_key = ("detailer-1.0" if use_detailer_lora else "detailer-off", "distilled-1.0")
         if self.pipeline is None or self._pipeline_scales != pipeline_key:
             self.pipeline = TI2VidTwoStagesPipeline(
                 checkpoint_path=self.checkpoint_path,
@@ -225,6 +228,7 @@ def main(
     width: int = 768,
     height: int = 512,
     seed: int = 42,
+    use_detailer_lora: bool = False,
     ):
 
     ltx2 = LTX2()
@@ -241,6 +245,7 @@ def main(
             width=width,
             height=height,
             seed=seed,
+            use_detailer_lora=use_detailer_lora,
         )
         duration = time.time() - start
         print(f"🎥 Client received video in {int(duration)}s")
