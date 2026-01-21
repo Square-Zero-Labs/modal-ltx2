@@ -1,5 +1,6 @@
 import os
 import string
+import tempfile
 import time
 from pathlib import Path
 
@@ -152,12 +153,15 @@ class LTX2:
         prompt,
         num_inference_steps=40,
         num_frames=121,
-        width=768,
-        height=512,
+        width=1536,
+        height=1024,
         frame_rate = 24.0,
         guidance_scale=4.0,
         seed=42,
         use_detailer_lora=False,
+        image_bytes: bytes | None = None,
+        image_filename: str = "image.png",
+        image_strength: float = 1.0,
     ):
         from ltx_core.loader import LoraPathStrengthAndSDOps
         from ltx_core.model.video_vae import TilingConfig, get_video_chunks_number
@@ -194,6 +198,13 @@ class LTX2:
         tiling_config = TilingConfig.default()
         video_chunks_number = get_video_chunks_number(num_frames, tiling_config)
 
+        images = []
+        if image_bytes:
+            suffix = Path(image_filename).suffix or ".png"
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+                tmp_file.write(image_bytes)
+                images.append((tmp_file.name, 0, image_strength))
+
         print("🧠 LTX2: starting two-stage pipeline")
         video, audio = self.pipeline(
             prompt=prompt,
@@ -205,7 +216,7 @@ class LTX2:
             frame_rate=frame_rate,
             num_inference_steps=num_inference_steps,
             cfg_guidance_scale=guidance_scale,
-            images=[],
+            images=images,
             tiling_config=tiling_config,
         )
         print("🧠 LTX2: pipeline complete")
@@ -232,10 +243,12 @@ def main(
     num_inference_steps: int = 40,  
     guidance_scale: float = 4.0,
     seconds: int = 5,
-    width: int = 768,
-    height: int = 512,
+    width: int = 1536,
+    height: int = 1024,
     seed: int = 42,
     use_detailer_lora: bool = False,
+    image_path: str = "",
+    image_strength: float = 1.0,
     ):
 
     ltx2 = LTX2()
@@ -246,6 +259,13 @@ def main(
         raw_frames = seconds * 24
         num_frames = max(1, ((raw_frames - 1) // 8) * 8 + 1)
         print(f"🎥 Using {num_frames} frames for {seconds}s at 24 fps")
+        image_bytes = None
+        image_filename = "image.png"
+        if image_path:
+            image_path_obj = Path(image_path)
+            image_bytes = image_path_obj.read_bytes()
+            image_filename = image_path_obj.name
+
         mp4_name = ltx2.generate.remote(
             prompt=prompt,
             num_inference_steps=num_inference_steps,
@@ -255,6 +275,9 @@ def main(
             height=height,
             seed=seed,
             use_detailer_lora=use_detailer_lora,
+            image_bytes=image_bytes,
+            image_filename=image_filename,
+            image_strength=image_strength,
         )
         duration = time.time() - start
         print(f"🎥 Client received video in {int(duration)}s")
