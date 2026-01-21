@@ -150,7 +150,7 @@ class LTX2:
     def generate(
         self,
         prompt,
-        num_inference_steps=50,
+        num_inference_steps=40,
         num_frames=121,
         width=768,
         height=512,
@@ -219,9 +219,9 @@ class LTX2:
 @app.local_entrypoint()
 def main(
     prompt="An animated polar bear walks into an igloo and says 'I'm home! Who is ready to party?'",
-    num_inference_steps: int = 50,  
+    num_inference_steps: int = 40,  
     guidance_scale: float = 4.0,
-    num_frames: int = 121, 
+    seconds: int = 5,
     width: int = 768,
     height: int = 512,
     seed: int = 42,
@@ -232,6 +232,7 @@ def main(
     def run():
         print(f"🎥 Generating a video from the prompt '{prompt}'")
         start = time.time()
+        num_frames = seconds * 24
         mp4_name = ltx2.generate.remote(
             prompt=prompt,
             num_inference_steps=num_inference_steps,
