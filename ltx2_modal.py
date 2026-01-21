@@ -236,7 +236,9 @@ def main(
     def run():
         print(f"🎥 Generating a video from the prompt '{prompt}'")
         start = time.time()
-        num_frames = seconds * 24
+        raw_frames = seconds * 24
+        num_frames = max(1, ((raw_frames - 1) // 8) * 8 + 1)
+        print(f"🎥 Using {num_frames} frames for {seconds}s at 24 fps")
         mp4_name = ltx2.generate.remote(
             prompt=prompt,
             num_inference_steps=num_inference_steps,
