@@ -170,9 +170,12 @@ class LTX2:
         loras = []
         if use_detailer_lora:
             loras.append(LoraPathStrengthAndSDOps(self.detailer_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP))
-        distilled_loras = [LoraPathStrengthAndSDOps(self.distilled_lora_path, 0.8, LTXV_LORA_COMFY_RENAMING_MAP)]
+        distilled_loras = [
+            LoraPathStrengthAndSDOps(self.distilled_lora_path, 0.8, LTXV_LORA_COMFY_RENAMING_MAP),
+            LoraPathStrengthAndSDOps(self.detailer_lora_path, 1.0, LTXV_LORA_COMFY_RENAMING_MAP),
+        ]
 
-        pipeline_key = ("detailer-1.0" if use_detailer_lora else "detailer-off", "distilled-0.8")
+        pipeline_key = ("detailer-1.0" if use_detailer_lora else "detailer-off", "distilled-0.8+detailer-1.0")
         if self.pipeline is None or self._pipeline_scales != pipeline_key:
             self.pipeline = TI2VidTwoStagesPipeline(
                 checkpoint_path=self.checkpoint_path,
