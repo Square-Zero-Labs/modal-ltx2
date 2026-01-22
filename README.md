@@ -1,16 +1,32 @@
 # LTX-2 on Modal
 
-This repo deploys the LTX-2 text-to-video pipeline on Modal with a token-protected API and a Modal CLI entrypoint.
+This repo deploys the LTX-2 text and image to video two stage pipeline on Modal with proxy-auth-protected API endpoints and a Modal CLI entrypoint. This uses the full 19B dev LTX-2.
 
-## Modal setup
+## Prerequisites
 
-Create a Modal secret that holds the API token:
+1. **Clone this Repository:**
 
-```bash
-modal secret create ltx2-api-token LTX2_API_TOKEN=your-token-here
-```
+   ```bash
+   git clone https://github.com/Square-Zero-Labs/modal-ltx2
+   cd modal-ltx2
+   ```
 
-Create a Modal secret for Hugging Face (Gemma is gated):
+2. **Create a Modal Account:** Sign up for a free account at [modal.com](https://modal.com).
+
+3. **Install Modal Client:** Install the Modal client library and set up your authentication token.
+
+   ```bash
+   pip install modal
+   modal setup
+   ```
+
+4. Create a Hugging Face token with read permissions on https://huggingface.co/ so you can pull the Gemma weights.
+
+5. Agree to the Gemma terms here https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized.
+
+6. Place the Hugging Face token in an .env file that looks like .env.example
+
+7. Save your Hugging Face token as a Modal secret:
 
 ```bash
 modal secret create HF_TOKEN HF_TOKEN="$(python - <<'PY'
@@ -28,18 +44,13 @@ PY
 )"
 ```
 
-Deploy the app:
+## Deploy the app:
 
 ```bash
 modal deploy ltx2_modal.py
 ```
 
-Once deployed, Modal prints the web endpoint URL. Export it for API calls:
-
-```bash
-export LTX2_API_URL=https://<your-modal-url>
-export LTX2_API_TOKEN=your-token-here
-```
+Once deployed, Modal prints the web endpoint URL; set it in `.env` as `LTX2_API_URL` (the base URL; the API uses `/generate`).
 
 ## Generate a video locally via Modal
 
@@ -48,15 +59,7 @@ Use the local entrypoint to kick off a run on Modal and save the result:
 Output resolution is exactly the `--width`/`--height` you pass. Defaults are `1536x1024` (two-stage LTX-2 defaults). Width and height must be divisible by 64. For 16:9, we saw best results using `1280x704`.
 
 ```bash
-modal run ltx2_modal.py --width 1280 --height 704 --prompt "Style: Pixar-style 3D animation, EXT. snowy Arctic dusk at the mouth of a rounded ice igloo, a wide establishing shot with soft blue rim light and warm amber spill from inside as a friendly polar bear with big expressive eyes, a teal knit scarf, and fluffy fur pads across crunchy snow toward the entrance. The bear’s shoulders sway with a cheerful gait, breath puffing in the cold, while gentle wind and soft footsteps on snow mix with a cozy crackle from inside. The camera slowly dollies closer as the bear ducks under the ice arch and steps into the glowing interior, textured with smooth ice walls and a woven rug. In a medium shot, the bear straightens, smiles wide, and gestures with a paw, mouth moving clearly to the words, 'i’m home! what’s for dinner? i hope it’s salmon!' in a warm, upbeat voice. The bear’s ears perk and eyes sparkle as it looks around expectantly, and the camera eases to a gentle stop on a welcoming, intimate framing, pixar style acting and timing."
-```
-
-```bash
 modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --prompt "INT. OVEN – DAY. Static camera from inside the oven, looking outward through the slightly fogged glass door. Warm golden light glows around freshly baked cookies. The baker’s face fills the frame, eyes wide with focus, his breath fogging the glass as he leans in. Subtle reflections move across the glass as steam rises. Baker (whispering dramatically): 'Today… I achieve perfection.' He leans even closer, nose nearly touching the glass. 'Golden edges. Soft center. The gods themselves will smell these cookies and weep.' pixar style acting and timing"
-```
-
-```bash
-modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --prompt "EXT. GRAND CITY PLAZA, DAY - cinematic-realistic wide shot with crisp sunlight, long architectural shadows, and shimmering glass reflections as a massive fireball erupts behind an athletic blonde woman in faded jeans and a black tank top and blonde hair. She is launched forward through smoke and sparks and lands and bursts into a run across polished stone, the camera tracking alongside in a smooth, stabilized move that keeps her centered against the skyline. The shot pushes in to a medium close-up, revealing soot streaks on her cheekbones, a focused jawline, and bright blue eyes as she turns to face the lens. 'I can teach you how to make LTX-2 videos fast and for free!' she shouts triumphantly in clear American English, breath heaving, while the fireball roars and ash drifts in the sunlit air. Glassy facades catch the orange flare, fountains mist in the background, and the soundscape blends crackling flame and her voice ringing through the open square."
 ```
 
 Enable the detailer LoRA (applies to both stages; default is off):
@@ -68,35 +71,92 @@ modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --use-detailer-lo
 Image-to-video example:
 
 ```bash
-modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --image-path "./inputs/panda-at-work.jpg" --image-strength 0.9 --prompt 'A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!'
+modal run ltx2_modal.py --width 1280 --height 704 --seconds 5 --image-path "./inputs/panda-at-work.jpg" --image-strength 0.9 --prompt 'A pixar style panda in an office waves his paw in greeting. He says in a warm, cheerful voice: Have a seat! I would be happy to help you generate videos with LTX-2!'
 ```
 
-## Call the API directly
+## Generate a video via the API
+
+Create a Proxy Auth Token in the Modal UI for this workspace, then load the API URL and token values from your `.env` file:
 
 ```bash
-curl -X POST "$LTX2_API_URL" \
-  -H "Authorization: Bearer $LTX2_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -o ltx2-output.mp4 \
-  -d '{"prompt":"a cinematic mountain sunrise"}'
+export $(grep -E '^(LTX2_API_URL|LTX2_PROXY_TOKEN_ID|LTX2_PROXY_TOKEN_SECRET)=' .env | xargs)
 ```
 
-## API schema
+Kick off a generation job (returns a Modal `job_id`):
 
-`POST` JSON payload:
-
-```json
-{
-  "prompt": "a cinematic mountain sunrise",
-  "negative_prompt": null,
-  "height": 576,
-  "width": 1024,
-  "num_frames": 48,
-  "fps": 24,
-  "guidance_scale": 3.0,
-  "num_inference_steps": 30,
-  "seed": 0
-}
+```bash
+curl -X POST \
+  -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
+  -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
+  -F 'prompt=Style: Pixar-style 3D animation, EXT. snowy Arctic dusk at the mouth of a rounded ice igloo...' \
+  -F "seconds=5" \
+  -F "width=1280" \
+  -F "height=704" \
+  "$LTX2_API_URL/generate"
 ```
 
-Pass the token via `Authorization: Bearer <token>` (or `X-API-Token`).
+Check status with a HEAD request (returns `202` while running, `200` when ready):
+
+```bash
+curl -I \
+  -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
+  -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
+  "$LTX2_API_URL/generate/$JOB_ID"
+```
+
+Download the video bytes when ready (save locally to `outputs/`):
+
+```bash
+mkdir -p outputs
+curl -L \
+  -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
+  -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
+  "$LTX2_API_URL/generate/$JOB_ID" \
+  -o "outputs/${JOB_ID}.mp4"
+```
+
+Image-to-video via the API (send an image file path):
+
+```bash
+curl -X POST \
+  -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
+  -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
+  -F 'prompt=A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!' \
+  -F "seconds=6" \
+  -F "width=1280" \
+  -F "height=704" \
+  -F "image_path=@inputs/panda-at-work.jpg" \
+  -F "image_strength=0.9" \
+  "$LTX2_API_URL/generate"
+```
+
+Image-to-video via the API (send an image URL):
+
+```bash
+curl -X POST \
+  -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
+  -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
+  -F 'prompt=A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!' \
+  -F "seconds=6" \
+  -F "width=1280" \
+  -F "height=704" \
+  -F "image_url=https://example.com/panda-at-work.jpg" \
+  -F "image_strength=0.9" \
+  "$LTX2_API_URL/generate"
+```
+
+## Development Notes
+
+### Git Subtree Management
+
+When originally added:
+
+```bash
+git subtree add --prefix LTX-2 https://github.com/Lightricks/LTX-2 main --squash
+```
+
+If the original `LTX-2` repository is updated and you want to incorporate those changes into this project, you can pull the updates using the following command:
+
+```bash
+git subtree pull --prefix LTX-2 https://github.com/Lightricks/LTX-2 main --squash
+```

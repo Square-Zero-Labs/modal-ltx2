@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import modal
+from modal.exception import TimeoutError as ModalTimeoutError
 
 MODEL_ID = "Lightricks/LTX-2"
 DETAILER_REPO_ID = "Lightricks/LTX-2-19b-IC-LoRA-Detailer"
@@ -34,6 +35,7 @@ image = (
         "torchaudio==2.7.0",
         "tqdm==4.67.1",
         "transformers==4.51.3",
+        "fastapi[standard]",
         "file:///root/LTX-2/packages/ltx-core",
         "file:///root/LTX-2/packages/ltx-pipelines",
     )
@@ -53,6 +55,8 @@ image = image.env({"HF_HOME": str(MODEL_PATH)})
 
 
 MINUTES = 60  # seconds
+
+FRAME_RATE = 24.0
 
 def get_hf_token():
     token = os.getenv("HF_TOKEN")
@@ -77,6 +81,72 @@ def slugify(prompt):
     prompt = prompt[:230]  # some OSes limit filenames to <256 chars
     mp4_name = str(int(time.time())) + "_" + prompt + ".mp4"
     return mp4_name
+
+def get_num_frames(seconds: int) -> int:
+    raw_frames = seconds * FRAME_RATE
+    return max(1, int(raw_frames + 1))
+
+def build_generation_kwargs(
+    *,
+    prompt: str,
+    num_inference_steps: int,
+    guidance_scale: float,
+    seconds: int,
+    width: int,
+    height: int,
+    seed: int,
+    use_detailer_lora: bool,
+    image_bytes: bytes | None,
+    image_filename: str,
+    image_strength: float,
+) -> dict:
+    num_frames = get_num_frames(seconds)
+    return dict(
+        prompt=prompt,
+        num_inference_steps=num_inference_steps,
+        guidance_scale=guidance_scale,
+        num_frames=num_frames,
+        width=width,
+        height=height,
+        frame_rate=FRAME_RATE,
+        seed=seed,
+        use_detailer_lora=use_detailer_lora,
+        image_bytes=image_bytes,
+        image_filename=image_filename,
+        image_strength=image_strength,
+    )
+
+def fetch_image_from_url(image_url: str) -> tuple[bytes, str]:
+    from urllib.parse import urlparse
+    from urllib.request import urlopen
+
+    try:
+        with urlopen(image_url, timeout=20) as response:
+            image_bytes = response.read()
+    except Exception as exc:
+        raise ValueError("Failed to fetch image_url") from exc
+    parsed = urlparse(image_url)
+    filename = Path(parsed.path).name or "image.png"
+    return image_bytes, filename
+
+def read_local_image(image_path: str) -> tuple[bytes, str]:
+    path = Path(image_path)
+    return path.read_bytes(), path.name
+
+def resolve_image_input(image_path: str | None, image_url: str | None) -> tuple[bytes | None, str]:
+    if image_path and image_url:
+        raise ValueError("Provide image_path or image_url, not both")
+    if image_path:
+        return read_local_image(image_path)
+    if image_url:
+        return fetch_image_from_url(image_url)
+    return None, "image.png"
+
+def try_get_call_result(call: modal.FunctionCall) -> str | None:
+    try:
+        return call.get(timeout=0)
+    except (ModalTimeoutError, TimeoutError):
+        return None
 
 
 @app.cls(
@@ -155,7 +225,7 @@ class LTX2:
         num_frames=121,
         width=1536,
         height=1024,
-        frame_rate = 24.0,
+        frame_rate=FRAME_RATE,
         guidance_scale=4.0,
         seed=42,
         use_detailer_lora=False,
@@ -239,6 +309,104 @@ class LTX2:
         outputs.commit()
         return mp4_name
 
+web_app = None
+
+def build_web_app():
+    from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+    from fastapi.responses import StreamingResponse
+    from modal.exception import NotFoundError
+
+    app = FastAPI()
+
+    def get_call_or_404(job_id: str) -> modal.FunctionCall:
+        try:
+            return modal.FunctionCall.from_id(job_id)
+        except NotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Unknown job_id") from exc
+
+    @app.post("/generate")
+    async def generate_video(
+        request: Request,
+        prompt: str | None = Form(None),
+        num_inference_steps: int = Form(40),
+        guidance_scale: float = Form(4.0),
+        seconds: int = Form(5),
+        width: int = Form(1536),
+        height: int = Form(1024),
+        seed: int = Form(42),
+        use_detailer_lora: bool = Form(False),
+        image_strength: float = Form(1.0),
+        image_url: str | None = Form(None),
+        image_path: UploadFile | None = File(None),
+    ):
+        ltx2 = LTX2()
+        if request.headers.get("content-type", "").startswith("application/json"):
+            raise HTTPException(status_code=400, detail="Use multipart form data")
+        if prompt is None:
+            raise HTTPException(status_code=400, detail="Missing prompt")
+        image_bytes = None
+        image_filename = "image.png"
+        if image_path is not None and image_url:
+            raise HTTPException(status_code=400, detail="Provide image_path or image_url, not both")
+        if image_path is not None:
+            image_bytes = await image_path.read()
+            image_filename = image_path.filename or image_filename
+        elif image_url:
+            try:
+                image_bytes, image_filename = fetch_image_from_url(image_url)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+        generation_kwargs = build_generation_kwargs(
+            prompt=prompt,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            seconds=seconds,
+            width=width,
+            height=height,
+            seed=seed,
+            use_detailer_lora=use_detailer_lora,
+            image_bytes=image_bytes,
+            image_filename=image_filename,
+            image_strength=image_strength,
+        )
+        call = ltx2.generate.spawn(**generation_kwargs)
+        job_id = getattr(call, "object_id", None) or str(call)
+        base_url = str(request.base_url).rstrip("/")
+        return {
+            "job_id": job_id,
+            "status_url": f"{base_url}/generate/{job_id}",
+            "result_url": f"{base_url}/generate/{job_id}",
+        }
+
+    @app.head("/generate/{job_id}")
+    def status_video(job_id: str):
+        call = get_call_or_404(job_id)
+        mp4_name = try_get_call_result(call)
+        if mp4_name is None:
+            return Response(status_code=202)
+        return Response(status_code=200)
+
+    @app.get("/generate/{job_id}")
+    def get_video(job_id: str):
+        call = get_call_or_404(job_id)
+        mp4_name = try_get_call_result(call)
+        if mp4_name is None:
+            return Response(status_code=202)
+        return StreamingResponse(outputs.read_file(mp4_name), media_type="video/mp4")
+
+    return app
+
+def get_web_app():
+    global web_app
+    if web_app is None:
+        web_app = build_web_app()
+    return web_app
+
+@app.function(image=image, volumes={OUTPUTS_PATH: outputs})
+@modal.asgi_app(requires_proxy_auth=True)
+def api():
+    return get_web_app()
+
 @app.local_entrypoint()
 def main(
     prompt="An animated polar bear walks into an igloo and says 'I'm home! Who is ready to party?'",
@@ -250,6 +418,7 @@ def main(
     seed: int = 42,
     use_detailer_lora: bool = False,
     image_path: str = "",
+    image_url: str = "",
     image_strength: float = 1.0,
     ):
 
@@ -258,21 +427,21 @@ def main(
     def run():
         print(f"🎥 Generating a video from the prompt '{prompt}'")
         start = time.time()
-        raw_frames = seconds * 24
-        num_frames = max(1, raw_frames +1)
-        print(f"🎥 Using {num_frames} frames for {seconds}s at 24 fps")
-        image_bytes = None
-        image_filename = "image.png"
-        if image_path:
-            image_path_obj = Path(image_path)
-            image_bytes = image_path_obj.read_bytes()
-            image_filename = image_path_obj.name
+        num_frames = get_num_frames(seconds)
+        print(f"🎥 Using {num_frames} frames for {seconds}s at {FRAME_RATE:.0f} fps")
+        try:
+            image_bytes, image_filename = resolve_image_input(
+                image_path or None,
+                image_url or None,
+            )
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
-        mp4_name = ltx2.generate.remote(
+        generation_kwargs = build_generation_kwargs(
             prompt=prompt,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
-            num_frames=num_frames,
+            seconds=seconds,
             width=width,
             height=height,
             seed=seed,
@@ -281,6 +450,12 @@ def main(
             image_filename=image_filename,
             image_strength=image_strength,
         )
+        call = ltx2.generate.spawn(**generation_kwargs)
+        job_id = getattr(call, "object_id", None) or str(call)
+        print(f"🎥 Job id: {job_id}")
+
+        mp4_name = call.get()
+
         duration = time.time() - start
         print(f"🎥 Client received video in {int(duration)}s")
         print(f"🎥 LTX2 video saved to Modal Volume at {mp4_name}")
