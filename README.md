@@ -24,7 +24,7 @@ This repo deploys the LTX-2 text and image to video two stage pipeline on Modal 
 
 5. Create a Hugging Face token with read permissions on https://huggingface.co/ so you can pull the Gemma weights.
 
-6. Place the Hugging Face token in an .env file that looks like .env.example
+6. Place the Hugging Face token in an .env file that looks like env.example
 
 7. Save your Hugging Face token as a Modal secret:
 
