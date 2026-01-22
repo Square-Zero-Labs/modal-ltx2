@@ -12,6 +12,15 @@ dist/
 venv/
 env/
 .env
+.env.*
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+Thumbs.db
+.idea/
+.vscode/
 
 .pytest_cache/
 .mypy_cache/
