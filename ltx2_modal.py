@@ -10,7 +10,7 @@ from modal.exception import TimeoutError as ModalTimeoutError
 MODEL_ID = "Lightricks/LTX-2"
 DETAILER_REPO_ID = "Lightricks/LTX-2-19b-IC-LoRA-Detailer"
 GEMMA_REPO_ID = "google/gemma-3-12b-it-qat-q4_0-unquantized"
-APP_NAME = "ltx2-text-to-video"
+APP_NAME = "ltx2-text-image-to-video"
 
 CHECKPOINT_FILENAME = "ltx-2-19b-dev.safetensors"
 DISTILLED_LORA_FILENAME = "ltx-2-19b-distilled-lora-384.safetensors"
@@ -47,7 +47,7 @@ app = modal.App(APP_NAME, secrets=[modal.Secret.from_name("HF_TOKEN")])
 VOLUME_NAME = "ltx2-outputs"
 outputs = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
 OUTPUTS_PATH = Path("/outputs")
-MODEL_VOLUME_NAME = "ltx2-model-without-transformers"
+MODEL_VOLUME_NAME = "ltx2-model"
 model = modal.Volume.from_name(MODEL_VOLUME_NAME, create_if_missing=True)
 
 MODEL_PATH = Path("/models")
