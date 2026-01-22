@@ -93,10 +93,7 @@ JOB_ID=$(curl -sS -X POST \
   -F "width=1280" \
   -F "height=704" \
   "$LTX2_API_URL/generate" \
-  | python - <<'PY'
-import json,sys
-print(json.load(sys.stdin)["job_id"])
-PY
+  | python -c 'import json,sys; print(json.load(sys.stdin)["job_id"])'
 )
 echo "JOB_ID=$JOB_ID"
 ```
@@ -127,17 +124,14 @@ Image-to-video via the API (send an image file path):
 JOB_ID=$(curl -sS -X POST \
   -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
   -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
-  -F 'prompt=A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!' \
+  -F 'prompt=A pixar style panda in an office waves his paw in greeting. He says in a warm, friendly voice: Have a seat! I would be happy to help you generate videos with LTX-2!' \
   -F "seconds=6" \
   -F "width=1280" \
   -F "height=704" \
   -F "image_path=@inputs/panda-at-work.jpg" \
   -F "image_strength=0.9" \
   "$LTX2_API_URL/generate" \
-  | python - <<'PY'
-import json,sys
-print(json.load(sys.stdin)["job_id"])
-PY
+  | python -c 'import json,sys; print(json.load(sys.stdin)["job_id"])'
 )
 echo "JOB_ID=$JOB_ID"
 ```
@@ -155,10 +149,7 @@ JOB_ID=$(curl -sS -X POST \
   -F "image_url=https://example.com/panda-at-work.jpg" \
   -F "image_strength=0.9" \
   "$LTX2_API_URL/generate" \
-  | python - <<'PY'
-import json,sys
-print(json.load(sys.stdin)["job_id"])
-PY
+  | python -c 'import json,sys; print(json.load(sys.stdin)["job_id"])'
 )
 echo "JOB_ID=$JOB_ID"
 ```
