@@ -82,17 +82,23 @@ Create a Proxy Auth Token in the Modal UI for this workspace, then load the API 
 export $(grep -E '^(LTX2_API_URL|LTX2_PROXY_TOKEN_ID|LTX2_PROXY_TOKEN_SECRET)=' .env | xargs)
 ```
 
-Kick off a generation job (returns a Modal `job_id`):
+Kick off a generation job (captures the Modal `job_id`):
 
 ```bash
-curl -X POST \
+JOB_ID=$(curl -sS -X POST \
   -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
   -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
   -F 'prompt=Style: Pixar-style 3D animation, EXT. snowy Arctic dusk at the mouth of a rounded ice igloo...' \
   -F "seconds=5" \
   -F "width=1280" \
   -F "height=704" \
-  "$LTX2_API_URL/generate"
+  "$LTX2_API_URL/generate" \
+  | python - <<'PY'
+import json,sys
+print(json.load(sys.stdin)["job_id"])
+PY
+)
+echo "JOB_ID=$JOB_ID"
 ```
 
 Check status with a HEAD request (returns `202` while running, `200` when ready):
@@ -118,7 +124,7 @@ curl -L \
 Image-to-video via the API (send an image file path):
 
 ```bash
-curl -X POST \
+JOB_ID=$(curl -sS -X POST \
   -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
   -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
   -F 'prompt=A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!' \
@@ -127,13 +133,19 @@ curl -X POST \
   -F "height=704" \
   -F "image_path=@inputs/panda-at-work.jpg" \
   -F "image_strength=0.9" \
-  "$LTX2_API_URL/generate"
+  "$LTX2_API_URL/generate" \
+  | python - <<'PY'
+import json,sys
+print(json.load(sys.stdin)["job_id"])
+PY
+)
+echo "JOB_ID=$JOB_ID"
 ```
 
 Image-to-video via the API (send an image URL):
 
 ```bash
-curl -X POST \
+JOB_ID=$(curl -sS -X POST \
   -H "Modal-Key: $LTX2_PROXY_TOKEN_ID" \
   -H "Modal-Secret: $LTX2_PROXY_TOKEN_SECRET" \
   -F 'prompt=A pixar style panda in an office waves his paw in greeting. He says in a warm, upbeat voice: Have a seat! I would be happy to help you generate videos with LTX-2!' \
@@ -142,7 +154,13 @@ curl -X POST \
   -F "height=704" \
   -F "image_url=https://example.com/panda-at-work.jpg" \
   -F "image_strength=0.9" \
-  "$LTX2_API_URL/generate"
+  "$LTX2_API_URL/generate" \
+  | python - <<'PY'
+import json,sys
+print(json.load(sys.stdin)["job_id"])
+PY
+)
+echo "JOB_ID=$JOB_ID"
 ```
 
 ## Development Notes
