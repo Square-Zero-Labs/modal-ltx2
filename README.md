@@ -4,25 +4,25 @@ This repo deploys the LTX-2 text and image to video two stage pipeline on Modal 
 
 ## Prerequisites
 
-1. **Clone this Repository:**
+1. **Create a Modal Account:** Sign up for a free account at [modal.com](https://modal.com).
 
-   ```bash
-   git clone https://github.com/Square-Zero-Labs/modal-ltx2
-   cd modal-ltx2
-   ```
-
-2. **Create a Modal Account:** Sign up for a free account at [modal.com](https://modal.com).
-
-3. **Install Modal Client:** Install the Modal client library and set up your authentication token.
+2. **Install Modal Client:** Install the Modal client library and set up your authentication token.
 
    ```bash
    pip install modal
    modal setup
    ```
 
-4. Create a Hugging Face token with read permissions on https://huggingface.co/ so you can pull the Gemma weights.
+3. **Clone this Repository:**
 
-5. Agree to the Gemma terms here https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized.
+   ```bash
+   git clone https://github.com/Square-Zero-Labs/modal-ltx2
+   cd modal-ltx2
+   ```
+
+4. Agree to the Gemma terms here https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized.
+
+5. Create a Hugging Face token with read permissions on https://huggingface.co/ so you can pull the Gemma weights.
 
 6. Place the Hugging Face token in an .env file that looks like .env.example
 
