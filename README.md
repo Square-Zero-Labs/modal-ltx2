@@ -59,7 +59,7 @@ Use the local entrypoint to kick off a run on Modal and save the result:
 Output resolution is exactly the `--width`/`--height` you pass. Defaults are `1536x1024` (two-stage LTX-2 defaults). Width and height must be divisible by 64. For 16:9, we saw best results using `1280x704`.
 
 ```bash
-modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --prompt "INT. OVEN – DAY. Static camera from inside the oven, looking outward through the slightly fogged glass door. Warm golden light glows around freshly baked cookies. The baker’s face fills the frame, eyes wide with focus, his breath fogging the glass as he leans in. Subtle reflections move across the glass as steam rises. Baker (whispering dramatically): 'Today… I achieve perfection.' He leans even closer, nose nearly touching the glass. 'Golden edges. Soft center. The gods themselves will smell these cookies and weep.' pixar style acting and timing"
+modal run ltx2_modal.py --width 1280 --height 704 --seconds 10 --prompt "Style: Pixar 3d animation. \n INT. OVEN – DAY. Static camera from inside the oven, looking outward through the slightly fogged glass door. Warm golden light glows around freshly baked cookies. The baker’s face fills the frame, eyes wide with focus, his breath fogging the glass as he leans in. Subtle reflections move across the glass as steam rises. Baker (whispering dramatically): 'Today… I achieve perfection.' He leans even closer, nose nearly touching the glass. 'Golden edges. Soft center. The gods themselves will smell these cookies and weep.' pixar style acting and timing"
 ```
 
 Enable the detailer LoRA (applies to both stages; default is off):
