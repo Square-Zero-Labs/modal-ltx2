@@ -32,3 +32,4 @@ htmlcov/
 *.mp4
 outputs/
 tmp/ltx2/
+prompt-notes.md
